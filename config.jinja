@@ -9,6 +9,7 @@ worker_processes  {{ config.get('workers', 1) }};
 events {
     worker_connections  1024;
 }
+daemon off;
 http {
 	upstream web_app {
     	server {{config.get('haproxy_token','#HAPROXY#')}}:{{config.get('webapp_proxy_port',8080)}}; 
