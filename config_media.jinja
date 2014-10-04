@@ -1,0 +1,52 @@
+{% set config = pillar.get('nginx_config',{}) %}
+user  {{ config.get('user', 'www-data') }};
+worker_processes  {{ config.get('workers', 1) }};
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+#pid        logs/nginx.pid;
+events {
+    worker_connections  1024;
+}
+daemon off;
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  access.log  main;
+    sendfile        on;
+    #tcp_nopush     on;
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    gzip  on;
+    set_real_ip_from   192.168.0.0/16;
+    set_real_ip_from   10.0.0.0/8;
+    set_real_ip_from   172.16.0.0/12;
+    real_ip_header     X-Forwarded-For;
+    server {
+        listen       8090;
+        server_name  localhost;
+    }
+    location / {
+            root /media_data/;
+            dav_methods PUT DELETE;
+            create_full_put_path on;
+            dav_access user:rw group:r all:r;
+            # kill DAV methods which comes through proxy
+            # the real-ip trick above might work well enough
+            #if ($request_method ! GET) {
+            #  if ($http_x_forwarded_for ! "") {
+            #    return 403;
+            #  }
+            3}
+            limit_except GET {
+                allow 192.168.0.0/16 10.0.0.0/8 172.16.0.0/12 ;
+                deny all;
+            }
+    }
+}
