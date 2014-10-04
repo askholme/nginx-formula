@@ -29,10 +29,9 @@ get-nginx:
     - source: salt://nginx/nginx.tar.gz
   cmd.wait:
     - cwd: {{ home }}
-    - name: tar -zxf {{ nginx_package }} -C {{ home }}
+    - name: tar -zxf {{ home}}/nginx.tar.gz -C {{ home }}
     - require:
       - file: nginx_user
-      - pkg: get-nginx
     - watch:
       - file: get-nginx
 
@@ -40,12 +39,4 @@ init_file:
   file.managed:
     - name: /service/nginx/run
     - source: salt://nginx/nginx-run
-
-nginx_conf:
-  file.managed:
-    - name: {{home}}/nginx.conf
-    - template: jinja
-    - user: root
-    - group: root
-    - mode: 440
-    - source: salt://nginx/config.jinja
+    - makedirs: true

@@ -1,4 +1,4 @@
-{% set config = pillar.get('nginx_config') %}
+{% set config = pillar.get('nginx_config',{})  %}
 user  {{ config.get('user', 'www-data') }};
 worker_processes  {{ config.get('workers', 1) }};
 
@@ -11,9 +11,11 @@ events {
 }
 daemon off;
 http {
-	upstream web_app {
-    	server {{config.get('haproxy_token','#HAPROXY#')}}:{{config.get('webapp_proxy_port',8080)}}; 
+  {% for proxy in config.get('proxy',[]) %}
+	upstream {{proxy.get('name')}} {
+    	server {{proxy.get('dns')}}:{{config.get('port')}}; 
 	}
+  {% endfor %}
   proxy_cache_path /data/nginx_cache keys_zone=one:10m;
     include       mime.types;
     default_type  application/octet-stream;
@@ -35,21 +37,18 @@ http {
         listen       {{ config.get('port',80)}};
         server_name  {{ config.get('name','localhost')}};
         
-		    {% for webpath,filepath in config.get('static') %}
-		
-		    location /{{webpath}} {
-			    alias {{filepath}};
+		    {% for static in config.get('static',[]) %}
+		    location /{{static.get('name')}} {
+			    alias {{static.get('path')}};
 		    }
         {% endfor %}
-        location /static {
+        {% for proxy in config.get('proxy') %}
+        location /{{proxy.get('path')}} {
           proxy_cache one;
-          uwsgi_pass  web_app;
+          uwsgi_pass  {{proxy.get('name')}}
           include     uwsgi_params;
         }
-        location / {
-			    uwsgi_pass  web_app;
-		      include     uwsgi_params;
-		    }
+        {% endfor %}
         error_page  404              /static/404.html;
         error_page   500 502 503 504  /static/50x.html;
     }
